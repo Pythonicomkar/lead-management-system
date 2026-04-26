@@ -88,10 +88,10 @@ app.add_middleware(
 )
 
 # Include API routers
-app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
-app.include_router(leads.router, prefix="/api/leads", tags=["leads"])
-app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
-app.include_router(tags.router, prefix="/api/tags", tags=["tags"])
+app.include_router(auth.router, prefix="/api")
+app.include_router(leads.router, prefix="/api")
+app.include_router(dashboard.router, prefix="/api")
+app.include_router(tags.router, prefix="/api")
 
 @app.get("/api/health")
 async def health_check():
