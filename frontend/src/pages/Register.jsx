@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { UserPlus, User, Lock, Mail, Sparkles } from 'lucide-react';
-import { authAPI } from '../api/auth';
+import api from '../api/axios';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -21,7 +21,7 @@ export default function Register() {
     setLoading(true);
     
     try {
-      await authAPI.register(formData);
+      await api.post('/auth/register', formData);
       navigate('/login');
     } catch (err) {
       setError(err.response?.data?.detail || 'Registration failed');

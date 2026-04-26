@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { LogIn, User, Lock, Sparkles } from 'lucide-react';
-import axios from 'axios';
+import api from '../api/axios';
 
 export default function Login() {
   const [username, setUsername] = useState('');
@@ -22,7 +22,7 @@ export default function Login() {
       params.append('username', username);
       params.append('password', password);
       
-      const response = await axios.post('http://127.0.0.1:8000/api/auth/login', params, {
+      const response = await api.post('/auth/login', params, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
         },
