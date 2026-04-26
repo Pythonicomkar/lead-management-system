@@ -1,15 +1,42 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from app.config import get_settings
+import os
 
 settings = get_settings()
 
-# Create async engine
-engine = create_async_engine(
-    settings.DATABASE_URL,
-    echo=settings.DEBUG,
-    future=True
-)
+# Get database URL from settings/environment
+DATABASE_URL = settings.DATABASE_URL
+
+# Handle PostgreSQL URL format for Render
+# Render provides: postgres://user:pass@host/dbname
+# But SQLAlchemy needs: postgresql+asyncpg://user:pass@host/dbname
+if DATABASE_URL:
+    if DATABASE_URL.startswith("postgres://"):
+        DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif DATABASE_URL.startswith("postgresql://"):
+        DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+# Create async engine with appropriate configuration
+if "sqlite" in DATABASE_URL:
+    # SQLite configuration (local development)
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=settings.DEBUG,
+        future=True,
+        connect_args={"check_same_thread": False}  # Required for SQLite
+    )
+else:
+    # PostgreSQL configuration (production)
+    engine = create_async_engine(
+        DATABASE_URL,
+        echo=settings.DEBUG,
+        future=True,
+        pool_size=5,        # Limit connection pool
+        max_overflow=10,    # Allow overflow connections
+        pool_pre_ping=True, # Verify connections before use
+        pool_recycle=3600   # Recycle connections every hour
+    )
 
 # Create async session factory
 AsyncSessionLocal = async_sessionmaker(
