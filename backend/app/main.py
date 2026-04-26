@@ -112,7 +112,12 @@ async def api_info():
     }
 
 # Serve React Frontend in Production
-FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
+# __file__ = backend/app/main.py
+# Go up 2 levels to reach root, then frontend/dist
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "..", "frontend", "dist")
+
+print(f"Frontend directory path: {FRONTEND_DIR}")
+print(f"Frontend exists: {os.path.exists(FRONTEND_DIR)}")
 
 if os.path.exists(FRONTEND_DIR):
     # Mount static assets
