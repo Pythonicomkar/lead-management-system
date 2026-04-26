@@ -1,26 +1,26 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
-from typing import List
+from typing import Optional
 
 class Settings(BaseSettings):
     # Application Settings
     APP_NAME: str = "Lead Management System"
     APP_VERSION: str = "2.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
     
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./leads.db"
     
     # JWT Authentication
-    SECRET_KEY: str = "your-secret-key-change-in-production-1234567890"
+    SECRET_KEY: str = "change-this-to-a-real-secret-key"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    # Telegram Bot
-    TELEGRAM_BOT_TOKEN: str = "YOUR_BOT_TOKEN_HERE"
+    # Telegram Bot (Optional - app will work without it)
+    TELEGRAM_BOT_TOKEN: Optional[str] = None
     
-    # CORS
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173", "http://127.0.0.1:3000"]
+    # CORS - Use comma-separated string or "*"
+    ALLOWED_ORIGINS: str = "*"
     
     # Pagination
     DEFAULT_PAGE_SIZE: int = 50
@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+        extra = "allow"
 
 @lru_cache()
 def get_settings():

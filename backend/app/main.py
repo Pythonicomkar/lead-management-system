@@ -4,13 +4,27 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 import os
+import sys
 
 from app.config import get_settings
 from app.database import init_db
 from app.routers import leads, dashboard, auth, tags
-from app.bot.bot_runner import start_bot, stop_bot
 
 settings = get_settings()
+
+# Parse CORS origins
+if settings.ALLOWED_ORIGINS == "*":
+    cors_origins = ["*"]
+else:
+    cors_origins = [origin.strip() for origin in settings.ALLOWED_ORIGINS.split(",")]
+
+# Try to import bot, but don't fail if it can't
+try:
+    from app.bot.bot_runner import start_bot, stop_bot
+    bot_available = True
+except ImportError as e:
+    print(f"Warning: Telegram bot module not available: {e}")
+    bot_available = False
 
 # Store bot instance globally
 bot_instance = None
@@ -21,16 +35,30 @@ async def lifespan(app: FastAPI):
     global bot_instance
     
     print("Starting up Lead Management System v2.0...")
-    await init_db()
-    print("Database initialized successfully!")
     
-    # Start Telegram Bot
-    print("Starting Telegram Bot...")
+    # Initialize database
     try:
-        bot_instance = await start_bot()
-        print("Telegram Bot started successfully!")
+        await init_db()
+        print("Database initialized successfully!")
     except Exception as e:
-        print(f"Warning: Telegram Bot failed to start: {e}")
+        print(f"ERROR: Database initialization failed: {e}")
+        raise
+    
+    # Start Telegram Bot (optional)
+    if bot_available and settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_TOKEN != "YOUR_BOT_TOKEN_HERE":
+        print("Starting Telegram Bot...")
+        try:
+            bot_instance = await start_bot()
+            print("Telegram Bot started successfully!")
+        except Exception as e:
+            print(f"Warning: Telegram Bot failed to start: {e}")
+            print("App will continue without Telegram Bot")
+            bot_instance = None
+    else:
+        if not settings.TELEGRAM_BOT_TOKEN:
+            print("Telegram Bot not configured (no token provided)")
+        else:
+            print("Telegram Bot token not set (using default placeholder)")
         bot_instance = None
     
     yield
@@ -38,7 +66,10 @@ async def lifespan(app: FastAPI):
     # Shutdown
     print("Shutting down...")
     if bot_instance:
-        await stop_bot(bot_instance)
+        try:
+            await stop_bot(bot_instance)
+        except Exception as e:
+            print(f"Warning: Error stopping bot: {e}")
     print("Shutdown complete!")
 
 app = FastAPI(
@@ -47,10 +78,10 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Configure CORS
+# Configure CORS with proper origins
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your actual domain
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,6 +101,16 @@ async def health_check():
         "bot_running": bot_instance is not None
     }
 
+@app.get("/api")
+async def api_info():
+    return {
+        "message": "Lead Management System API v2.0",
+        "version": settings.APP_VERSION,
+        "docs": "/docs",
+        "redoc": "/redoc",
+        "bot_running": bot_instance is not None if bot_instance else False
+    }
+
 # Serve React Frontend in Production
 FRONTEND_DIR = os.path.join(os.path.dirname(__file__), "..", "frontend", "dist")
 
@@ -79,17 +120,29 @@ if os.path.exists(FRONTEND_DIR):
     if os.path.exists(assets_dir):
         app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
     
-    # Serve other static files (like favicon, icons)
+    # Serve other static files and SPA routing
     @app.get("/{filename:path}")
     async def serve_frontend(filename: str):
         file_path = os.path.join(FRONTEND_DIR, filename)
+        
+        # Don't interfere with API routes
+        if filename.startswith("api/"):
+            return {"error": "API endpoint not found"}
+        
+        # Don't interfere with docs
+        if filename in ["docs", "redoc", "openapi.json"]:
+            return {"error": "Not found"}
         
         # If file exists, serve it
         if os.path.exists(file_path) and os.path.isfile(file_path):
             return FileResponse(file_path)
         
-        # For SPA routing, return index.html for all non-file routes
-        return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))
+        # For SPA routing - return index.html for all other routes
+        index_path = os.path.join(FRONTEND_DIR, "index.html")
+        if os.path.exists(index_path):
+            return FileResponse(index_path)
+        
+        return {"error": "Frontend not available", "message": "Please build the frontend first"}
 else:
     @app.get("/")
     async def root():
@@ -97,5 +150,6 @@ else:
             "message": "Lead Management System API v2.0",
             "version": settings.APP_VERSION,
             "docs": "/docs",
-            "redoc": "/redoc"
+            "redoc": "/redoc",
+            "note": "Frontend not built - API only mode"
         }
