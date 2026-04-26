@@ -87,11 +87,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routers
-app.include_router(auth.router, prefix="/api")
-app.include_router(leads.router, prefix="/api")
-app.include_router(dashboard.router, prefix="/api")
-app.include_router(tags.router, prefix="/api")
+# Include API routers (no prefixes - routers already have /api/* prefixes)
+app.include_router(auth.router)
+app.include_router(leads.router)
+app.include_router(dashboard.router)
+app.include_router(tags.router)
 
 @app.get("/api/health")
 async def health_check():
