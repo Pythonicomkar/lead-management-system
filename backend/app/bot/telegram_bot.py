@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from datetime import datetime
 from typing import Optional
+import os
 
 from app.config import get_settings
 from app.database import AsyncSessionLocal
@@ -560,6 +561,7 @@ def create_bot():
         print("⚠️ Telegram bot token not configured. Bot will not start.")
         return None
     
+    # Build application
     app = Application.builder().token(token).build()
     
     # Command handlers
@@ -592,4 +594,5 @@ def create_bot():
     # Callback query handler
     app.add_handler(CallbackQueryHandler(button_handler))
     
+    print("✅ Telegram bot application created successfully")
     return app

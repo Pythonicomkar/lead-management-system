@@ -1,8 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+from telegram import Update
 import os
 import sys
 
@@ -49,7 +50,10 @@ async def lifespan(app: FastAPI):
         print("Starting Telegram Bot...")
         try:
             bot_instance = await start_bot()
-            print("Telegram Bot started successfully!")
+            if bot_instance:
+                print("Telegram Bot started successfully!")
+            else:
+                print("Telegram Bot failed to start (check token)")
         except Exception as e:
             print(f"Warning: Telegram Bot failed to start: {e}")
             print("App will continue without Telegram Bot")
@@ -110,6 +114,28 @@ async def api_info():
         "redoc": "/redoc",
         "bot_running": bot_instance is not None if bot_instance else False
     }
+
+# ========== Telegram Webhook ==========
+@app.post("/webhook")
+async def telegram_webhook(request: Request):
+    """Handle incoming Telegram updates via webhook"""
+    global bot_instance
+    
+    if bot_instance is None:
+        return {"status": "bot not running"}
+    
+    try:
+        # Parse the incoming update from Telegram
+        data = await request.json()
+        update = Update.de_json(data, bot_instance.bot)
+        
+        # Process the update through the bot
+        await bot_instance.process_update(update)
+        
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Webhook error: {e}")
+        return {"status": "error", "message": str(e)}
 
 # Serve React Frontend in Production
 # __file__ = backend/app/main.py
