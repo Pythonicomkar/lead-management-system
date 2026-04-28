@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import RiskDashboard from './pages/RiskDashboard'; // ✅ Add this
 import Leads from './pages/Leads';
 import Tags from './pages/tags';
 import Analytics from './pages/Analytics';
@@ -77,7 +78,7 @@ function App() {
           path="/dashboard" 
           element={
             <PrivateRoute>
-              <Dashboard />
+              <RiskDashboard />  {/* ✅ Changed to RiskDashboard */}
             </PrivateRoute>
           } 
         />
